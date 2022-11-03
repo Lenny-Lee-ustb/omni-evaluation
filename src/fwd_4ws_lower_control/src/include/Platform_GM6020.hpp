@@ -40,6 +40,8 @@ public:
 	int16_t MotorPosTune();
 	double AngleRound(double theta);
 	void sendZero(int s);
+	double angleCalculate(double vx,double vy);
+	void calWheelSpeed(double vx,double vy, double avz);
 	
 	int16_t curRx, velRx, angleRx, volTx;
     int8_t thermalRx; // Monitor thermal
@@ -47,6 +49,10 @@ public:
 	double volOut; 
 	double angle, angleLast, angleVel; // state
 	double angleDes, angleErr, angleRate, angleInit; // control
+
+	// servo position in robot corrdinate
+	double x_wheel, y_wheel;
+	double vx_wheel, vy_wheel;
 
 };
 
@@ -63,6 +69,15 @@ int16_t Platform_GM6020::MotorPosTune(){
 	double v;
 
 	angleErr = angleDes - angle;
+	if (angleErr > M_PI)
+	{
+		angleErr = angleErr - 2 * M_PI;
+	}
+	else if (angleErr < - M_PI)
+	{
+		angleErr = angleErr + 2 * M_PI;
+	}
+	
 	angleRate = P_angle * angleErr;
 	v =  (angleRate / (2* M_PI / 60.0 * GM6020_KV) ) / 24.0 * 30000.0;
 	v = std::min(std::max(v, -GM6020_V_MAX), GM6020_V_MAX);
@@ -105,5 +120,14 @@ void Platform_GM6020::sendZero(int s)
 	{
 		printf("send error\n");
 	}
+}
+
+void Platform_GM6020::calWheelSpeed(double vx,double vy, double avz){
+	vx_wheel = vx - y_wheel * avz;
+	vy_wheel = vy + x_wheel * avz;
+}
+
+double Platform_GM6020::angleCalculate(double vx,double vy){
+	return atan2(vy,vx);
 }
 

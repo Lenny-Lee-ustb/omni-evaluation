@@ -32,7 +32,9 @@
 
     <!-- spawn controller node -->
     <node pkg="fwd_4ws_lower_control" type="fwd_control" name="fwd_control" output="screen">
-        <param name="speedMax"     type="double"    value="1"/>
+        <param name="speedMax"     type="double"    value="3.0"/>
+        <param name="angularSpeedMax"     type="double"    value="6.0"/>
+		<param name="minSpeedThreadhold"     type="double"    value="0.05"/>
     </node>
 
     <!-- PlotJuggle -->

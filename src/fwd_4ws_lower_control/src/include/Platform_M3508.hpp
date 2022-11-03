@@ -42,6 +42,7 @@ public:
 	double LowPassFilter(double yLast, double x, double xLast);
 	void SendZero(int s);
 
+
 };
 
 Platform_M3508::Platform_M3508()

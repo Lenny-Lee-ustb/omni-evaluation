@@ -22,7 +22,6 @@ private:
     ros::Timer motorTimerTx,motorTimerRx;
     ros::Timer servoTimerTx,servoTimerRx;
 
-
     geometry_msgs::PolygonStamped MotorInfo, ServoInfo;
     geometry_msgs::Twist cmdUp, cmdSbus;
     sensor_msgs::Temperature MotorTemp, ServoTemp;
@@ -36,7 +35,7 @@ private:
     void sbusCB(const sbus_serial::Sbus::ConstPtr &sbus);
     void cmdCB(const geometry_msgs::Twist::ConstPtr &cmd_vel);
     void CmdMux();
-    void fwdKinematicCal(double vX, double vY, double avZ);
+    void fwdKinematicCal(const double vX,const double vY,const double avZ);
 
 public:
     fwd_control(int s_motor_can, int s_servo_can);
@@ -47,7 +46,7 @@ public:
     void txServoThread(const ros::TimerEvent &);
     void rxServoThread(const ros::TimerEvent &);
 
-    double speedMax;
+    double speedMax, angularSpeedMax, minSpeedThreadhold;
 
     Platform_M3508 motor[4];
     Platform_GM6020 servo[4];

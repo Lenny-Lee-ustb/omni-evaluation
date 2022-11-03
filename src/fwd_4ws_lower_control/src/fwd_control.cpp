@@ -1,7 +1,7 @@
 #include"include/fwd_control.h"
 
-#define CAR_LENGTH 0.380 //m
-#define CAR_WIDTH 0.320 //m
+#define ROBOT_LENGTH 0.300 //m
+#define ROBOT_WIDTH 0.320 //m
 #define MOTOR_RATIO 19.2 // input/output M3508 P19
 #define WHEEL_RADIUS 0.065 // wheel radius of 1/10 car
 #define MAX_SPPED 3.4 // 3.4m/s at 420rpm(out axle)
@@ -14,6 +14,8 @@ fwd_control::fwd_control(int s_motor_can, int s_servo_can)
 {
 	ros::NodeHandle n("~");
     n.getParam("speedMax", speedMax);
+    n.getParam("angularSpeedMax", angularSpeedMax);
+    n.getParam("minSpeedThreadhold", minSpeedThreadhold);
     
     s_motor = s_motor_can;
     s_servo = s_servo_can;
@@ -28,6 +30,14 @@ fwd_control::fwd_control(int s_motor_can, int s_servo_can)
     servo[2].angleInit = 4.1203;
     servo[3].angleInit = 2.9805;
 
+    servo[0].x_wheel = ROBOT_LENGTH/2.0;
+    servo[0].y_wheel = ROBOT_WIDTH/2.0;
+    servo[1].x_wheel = - ROBOT_LENGTH/2.0;
+    servo[1].y_wheel = ROBOT_WIDTH/2.0;
+    servo[2].x_wheel = - ROBOT_LENGTH/2.0;
+    servo[2].y_wheel = - ROBOT_WIDTH/2.0;
+    servo[3].x_wheel = ROBOT_LENGTH/2.0;
+    servo[3].y_wheel = - ROBOT_WIDTH/2.0;
 
     sbusSub = n_.subscribe<sbus_serial::Sbus>("/sbus", 10, &fwd_control::sbusCB, this);
     simulinkSub = n_.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, &fwd_control::cmdCB, this);
@@ -70,7 +80,7 @@ void fwd_control::sbusCB(const sbus_serial::Sbus::ConstPtr& sbus)
 
     cmdSbus.linear.x = double(longSbusIn)/500.0 * speedMax;
     cmdSbus.linear.y = double(lateralSbusIn)/500.0 * speedMax;
-    cmdSbus.angular.z = double(steerSbusIn) / 500 * MAX_ANGULAR_VLOCITY;
+    cmdSbus.angular.z = - double(steerSbusIn) / 500 * angularSpeedMax;
 };
 
 void fwd_control::cmdCB(const geometry_msgs::Twist::ConstPtr &cmd_vel){
@@ -107,25 +117,40 @@ void fwd_control::CmdMux(){
     }
     vX_cmd = fmin(fmax(vX_cmd,-speedMax),speedMax);
     vY_cmd = fmin(fmax(vY_cmd,-speedMax),speedMax);
-    avZ_cmd = fmin(fmax(avZ_cmd,-MAX_ANGULAR_VLOCITY),MAX_ANGULAR_VLOCITY);
+    avZ_cmd = fmin(fmax(avZ_cmd,-angularSpeedMax),angularSpeedMax);
 }
 
 
 
 // INPUT: vx(m/s), vy(m/s), omega(rad/s) 
 // OUTPUT: 4wd-4ws robot 
-void fwd_control::fwdKinematicCal(double vX, double vY, double avZ){
-    motor[0].speedDes = -vX_cmd;
-    motor[1].speedDes = -vX_cmd;
-    motor[2].speedDes = vX_cmd;
-    motor[3].speedDes = vX_cmd;
-
-    // ROS_INFO("FL: %.2f, FR: %.2f, RL: %.2f, RR: %.2f", vFL,vFR,vRL,vRR);
+// 转向角范围：-0.5 * 
+void fwd_control::fwdKinematicCal(const double vX,const double vY,const double avZ){
+    
+    
+    // motor[0].speedDes = -vX_cmd;
+    // motor[1].speedDes = -vX_cmd;
+    // motor[2].speedDes = vX_cmd;
+    // motor[3].speedDes = vX_cmd;
 
     for (int i = 0; i < 4; i++)
     {
-        servo[i].angleDes = avZ_cmd;
+        servo[i].calWheelSpeed(vX, -vY, avZ);
+        servo[i].angleDes = -servo[i].angleCalculate(servo[i].vx_wheel, servo[i].vy_wheel);
+        // if (servo[i].angleDes >= - 0.5* M_PI  && servo[i].angleDes <= 0.5* M_PI)
+        // {
+        //     motor[i].speedDes = sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
+        // }
+        // else
+        // {
+        //     motor[i].speedDes = - sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
+        //     servo[i].angleDes = servo[i].AngleRound(servo[i].angleDes - M_PI);
+        // }  
+        motor[i].speedDes = sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
     }
+    motor[0].speedDes = - motor[0].speedDes;
+    motor[1].speedDes = - motor[1].speedDes;
+
     
     for (int i = 0; i < 4; i++)
     {
