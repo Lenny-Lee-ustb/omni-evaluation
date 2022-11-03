@@ -2,8 +2,8 @@
 #include "include/sbus_serial_driver.h"
 #include "include/Sbus.h"
 
-#define CAR_LENGTH 0.380 //m
-#define CAR_WIDTH 0.320 //m
+#define CAR_LENGTH 0.370 //m
+#define CAR_WIDTH 0.315 //m
 #define MOTOR_RATIO 19.2 // input/output M3508 P19
 #define WHEEL_RADIUS 0.076 // wheel radius of 1/10 car
 #define MAX_SPPED 3.4 // 3.4m/s at 420rpm(out axle)
