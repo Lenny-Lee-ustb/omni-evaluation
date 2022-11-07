@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <!-- 1. startup sensors -->
+    <!-- RpLiadr s1 -->
+    <include file="$(find mbf_navigation)/launch/includes/rplidar.launch.xml"/>
+    <!-- RealSense T265 without TF -->
+    <include file="$(find mbf_navigation)/launch/includes/rs_t265_odom.launch.xml"/>
+    <!-- srf_laser_odometry -->
+    <!-- <include file="$(find mbf_navigation)/launch/includes/srf_laser_odometry.launch.xml"/> -->
+
+
+    <!-- 2. setup tf (amcl+ekf) -->
+    <!-- Map server -->
+    <!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find mbf_navigation)/maps/floor-6.yaml"/> -->
+    <!-- amcl -->
+    <!-- <include file="$(find mbf_navigation)/launch/includes/amcl.launch.xml"/> -->
+    <!-- ekf -->
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+        <rosparam command="load" file="$(find mbf_navigation)/param/ekf_params_t265.yaml" />
+    </node>
+
+
+    <!-- Navstack -->
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base">
+        <!-- planner parameters -->
+        <param name="base_global_planner" value="navfn/NavfnROS"/>
+		<param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS"/>
+        <rosparam file="$(find mbf_navigation)/param/teb_local_planner_params.yaml" command="load"/>
+        <rosparam file="$(find mbf_navigation)/param/base_global_planner_params.yaml" command="load"/>
+        <!-- costmap layers -->
+        <rosparam file="$(find mbf_navigation)/param/local_costmap_params.yaml" command="load"/>
+        <rosparam file="$(find mbf_navigation)/param/global_costmap_params.yaml" command="load"/>
+        <!-- move_base params -->
+        <rosparam file="$(find mbf_navigation)/param/move_base_params.yaml" command="load"/>        
+    </node>
+
+    <!-- Rviz -->
+    <node pkg="rviz" 
+          type="rviz" 
+          name="display" 
+          args="-d $(find pro_lower_controller)/rviz/odom.rviz" required="true"/>
+</launch>

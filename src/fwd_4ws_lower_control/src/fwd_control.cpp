@@ -79,7 +79,7 @@ void fwd_control::sbusCB(const sbus_serial::Sbus::ConstPtr& sbus)
     // signal inout and store
 
     cmdSbus.linear.x = double(longSbusIn)/500.0 * speedMax;
-    cmdSbus.linear.y = double(lateralSbusIn)/500.0 * speedMax;
+    cmdSbus.linear.y = - double(lateralSbusIn)/500.0 * speedMax;
     cmdSbus.angular.z = - double(steerSbusIn) / 500 * angularSpeedMax;
 };
 
@@ -126,16 +126,11 @@ void fwd_control::CmdMux(){
 // OUTPUT: 4wd-4ws robot 
 // 转向角范围：-0.5 * 
 void fwd_control::fwdKinematicCal(const double vX,const double vY,const double avZ){
-    
-    
-    // motor[0].speedDes = -vX_cmd;
-    // motor[1].speedDes = -vX_cmd;
-    // motor[2].speedDes = vX_cmd;
-    // motor[3].speedDes = vX_cmd;
-
+    // ROS_INFO("[Vx]: %.3f", vX);
+    // ROS_INFO("[Vy]: %.3f", vY);
     for (int i = 0; i < 4; i++)
     {
-        servo[i].calWheelSpeed(vX, -vY, avZ);
+        servo[i].calWheelSpeed(vX, vY, avZ);
         servo[i].angleDes = -servo[i].angleCalculate(servo[i].vx_wheel, servo[i].vy_wheel);
         // if (servo[i].angleDes >= - 0.5* M_PI  && servo[i].angleDes <= 0.5* M_PI)
         // {
@@ -156,7 +151,7 @@ void fwd_control::fwdKinematicCal(const double vX,const double vY,const double a
     {
         motor[i].curTx = motor[i].MotorTune();
         servo[i].volTx = servo[i].MotorPosTune();
-        // ROS_INFO("[%d]: %d",i,motor[i].curTx);
+
     }
 };
 

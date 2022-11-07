@@ -71,6 +71,7 @@ int16_t Platform_M3508::MotorTune(){
 	T_ref = Kd * (Vdes-dTheta) + T_ff;
 	T_ref = std::min(std::max(T_ref, M3508_T_MIN), M3508_T_MAX);
 	iqref = (int16_t) round(T_ref/K*(16384.0/20.0));
+	iqref = std::min(std::max(iqref, (int16_t) -16384), (int16_t) 16384);
 	return iqref;
 }
 
