@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <node pkg="path_load" type="path_load.py" name="path_loader" >
-        <param name="file_path" value="$(find path_load)/src/half-circle.csv" />
+        <param name="file_path" value="$(find path_load)/src/square.csv" />
         <param name="pub_hz" value="3" />
     </node>
     
@@ -17,20 +17,22 @@
 
     <!-- spawn Upper controller  !! -->
     <node pkg="pure_pursuit_controller" type="upper_controller_angle" name="upper_controller_angle" clear_params="true" output="screen">
-        <param name = "controller_freq" type="double" value = "40.0"/>
+        <param name = "controller_freq" type="double" value = "50.0"/>
         <param name = "goalRadius" type="double" value = "0.5"/>
         <param name = "goal_pose_err" type="double" value = "1.0"/>
 
         <param name = "baseSpeed" type="double" value = "1.5"/>
         <param name = "rot_angle" type="double" value = "0.0"/>
+        <param name = "forward_dist" type="double" value = "0.5"/>
 
-        <param name = "P_Long" type="double" value = "1.0"/>
-        <param name = "I_Long" type="double" value = "0.0"/>
-        <param name = "D_Long" type="double" value = "2.0"/>
+        <param name = "P_Lateral" type="double" value = "2.5"/>
+        <param name = "I_Lateral" type="double" value = "0.0"/>
+        <param name = "D_Lateral" type="double" value = "1.0"/>
 
-        <param name = "P_Yaw" type="double" value = "1.0"/>
+        <param name = "P_Yaw" type="double" value = "2.5"/>
         <param name = "I_Yaw" type="double" value = "0.0"/>
         <param name = "D_Yaw" type="double" value = "0.0"/>
     </node>
+    <node pkg="rviz" type="rviz" name="display" args="-d $(find pure_pursuit_controller)/launch/includes/odom.rviz" required="true"/>
 </launch>
 

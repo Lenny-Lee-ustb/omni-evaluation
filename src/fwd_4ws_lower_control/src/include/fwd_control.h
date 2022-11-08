@@ -27,7 +27,7 @@ private:
     sensor_msgs::Temperature MotorTemp, ServoTemp;
 
     double vX_cmd, vY_cmd, avZ_cmd;
-    long int motorRxCount, servoRxCount;
+    long int motorRxCount, servoRxCount, cmdMuxCount;
     int s_servo, s_motor; //socketcan handle for two line
     int  moveable_in, direct_in, control_in;
     bool failsafe, frame_lost;

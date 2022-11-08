@@ -18,7 +18,7 @@ UpperController::UpperController() {
   pn.param("baseSpeed", baseSpeed, 0.0);
   pn.param("goalRadius", goalRadius, 1.0);
   pn.param("goal_pose_err", goal_pose_err, 1.0);
-  pn.param("forward_dist", forward_dist, 1.0);
+  pn.param("forward_dist", forward_dist, 0.0);
   pn.param("rot_angle", rot_angle, 0.0);
   pn.param("P_Yaw", P_Yaw, 1.0);
   pn.param("I_Yaw", I_Yaw, 0.0);
@@ -98,7 +98,7 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
   if (goal_received) {
     double thetar = getYawFromPose(carPose);
     double theta = getYawFromPose(ForwardPose);
-    double d_theta = theta - thetar;
+    double d_theta =  getAngleRound(theta - thetar);
     double slow_factor = 1.0- fabs(pow(d_theta/3.14,3));
 
 
@@ -106,8 +106,10 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
         if (!goal_reached) {
           // PID control
           // w = atan2(2*0.35*sin(d_theta),forward_dist);
-          w = d_theta + atan2(lateral_dist, carVel.linear.x); 
+          // w = d_theta + atan2(lateral_dist, carVel.linear.x); 
+          w = d_theta * P_Yaw;
           vt = baseSpeed;
+          vn = lateral_dist * P_Lateral;
           
           last_speed = baseSpeed - carVel.linear.x;
           last_d_theta = d_theta;
@@ -116,9 +118,11 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
           // Rot_angle
           cmd_vel.angular.z = w;
           cmd_vel.linear.x = vt;
+          cmd_vel.linear.y = vn;
+
 
           ROS_INFO("----------");
-          ROS_INFO("Vyaw:%.2f, Vt:%.2f",w,vt);
+          ROS_INFO("Vyaw:%.2f, Vn:%.2f, linear.x: %.2f",w,vn,carVel.linear.x);
         }
     }
     pub_.publish(cmd_vel);

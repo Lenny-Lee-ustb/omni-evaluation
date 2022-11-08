@@ -34,7 +34,7 @@ public:
     double getCar2GoalDist();
     double GetLateralDir(const geometry_msgs::Pose &carPose,const geometry_msgs::Pose &ForwardPose);
     double isRightorLeft(const geometry_msgs::Point &wayPt, const geometry_msgs::Pose &carPose);
-    double getEta(const geometry_msgs::Pose &carPose);
+    double getAngleRound(double angle);
     geometry_msgs::Pose  getTrackPose(const geometry_msgs::Pose &carPose);
     geometry_msgs::Pose  getTrackForwardPose(const geometry_msgs::Pose &carPose, const double forward_dist);
 
@@ -186,6 +186,7 @@ double UpperController::getYawFromPose(const geometry_msgs::Pose &carPose) {
 }
 
 
+
 double UpperController::getLateralDist(const geometry_msgs::Pose &carPose,const geometry_msgs::Pose &ForwardPt){
 
   double car2pt_x = ForwardPt.position.x - carPose.position.x;
@@ -193,6 +194,21 @@ double UpperController::getLateralDist(const geometry_msgs::Pose &carPose,const 
   double dist = sqrt(car2pt_x * car2pt_x + car2pt_y * car2pt_y);
   
   return dist;
+}
+
+double UpperController::getAngleRound(double angle){
+  while (angle > M_PI || angle < -M_PI)
+  {
+    if (angle > M_PI)
+    {
+      angle = angle - 2 * M_PI;
+    }
+    if(angle < -M_PI)
+    {
+      angle = angle + 2 * M_PI;
+    }
+  }
+  return angle;
 }
 
 

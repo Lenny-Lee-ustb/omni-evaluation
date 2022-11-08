@@ -128,7 +128,7 @@ void Platform_GM6020::calWheelSpeed(double vx,double vy, double avz){
 }
 
 double Platform_GM6020::angleCalculate(double vx,double vy){
-	if(fabs(vx) < 0.1 && fabs(vy) < 0.1){
+	if(fabs(vx) < 0.03 && fabs(vy) < 0.03){
 		return 0.0;
 	}
 	else{

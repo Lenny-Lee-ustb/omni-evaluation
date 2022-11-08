@@ -3,12 +3,11 @@
 #define ROBOT_LENGTH 0.300 //m
 #define ROBOT_WIDTH 0.320 //m
 #define MOTOR_RATIO 19.2 // input/output M3508 P19
-#define WHEEL_RADIUS 0.065 // wheel radius of 1/10 car
+#define WHEEL_RADIUS 0.055 // wheel radius of 1/10 car
 #define MAX_SPPED 3.4 // 3.4m/s at 420rpm(out axle)
 #define MAX_ANGULAR_VLOCITY 2.0 // rad/s
 
 int s_servo, s_motor;
-
 
 fwd_control::fwd_control(int s_motor_can, int s_servo_can)
 {
@@ -20,8 +19,12 @@ fwd_control::fwd_control(int s_motor_can, int s_servo_can)
     s_motor = s_motor_can;
     s_servo = s_servo_can;
     moveable_in, direct_in, control_in = 0;
+    cmdMuxCount =0;
     motorRxCount = 0;
     servoRxCount = 0;
+    vX_cmd = 0.0;
+    vY_cmd = 0.0;
+    avZ_cmd =0.0;
     MotorInfo.polygon.points.resize(4);
     ServoInfo.polygon.points.resize(4);
 
@@ -96,12 +99,13 @@ void fwd_control::CmdMux(){
         if (failsafe == 1 || frame_lost == 1){
             ROS_ERROR("RC SIGNAL LOST!!! Check RC status!");
         }
-        else{
+        else if(cmdMuxCount%500 == 0){
             ROS_WARN("moveable_in=%d, control_in=%d", !!moveable_in, !!control_in);
         }
 
     }
     else{
+        // cmdMuxCount = 0;
         if (!moveable_in == false)
         {
             vX_cmd = cmdSbus.linear.x;
@@ -118,6 +122,7 @@ void fwd_control::CmdMux(){
     vX_cmd = fmin(fmax(vX_cmd,-speedMax),speedMax);
     vY_cmd = fmin(fmax(vY_cmd,-speedMax),speedMax);
     avZ_cmd = fmin(fmax(avZ_cmd,-angularSpeedMax),angularSpeedMax);
+    cmdMuxCount++;
 }
 
 
@@ -126,21 +131,11 @@ void fwd_control::CmdMux(){
 // OUTPUT: 4wd-4ws robot 
 // 转向角范围：-0.5 * 
 void fwd_control::fwdKinematicCal(const double vX,const double vY,const double avZ){
-    // ROS_INFO("[Vx]: %.3f", vX);
-    // ROS_INFO("[Vy]: %.3f", vY);
+
     for (int i = 0; i < 4; i++)
     {
         servo[i].calWheelSpeed(vX, vY, avZ);
         servo[i].angleDes = -servo[i].angleCalculate(servo[i].vx_wheel, servo[i].vy_wheel);
-        // if (servo[i].angleDes >= - 0.5* M_PI  && servo[i].angleDes <= 0.5* M_PI)
-        // {
-        //     motor[i].speedDes = sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
-        // }
-        // else
-        // {
-        //     motor[i].speedDes = - sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
-        //     servo[i].angleDes = servo[i].AngleRound(servo[i].angleDes - M_PI);
-        // }  
         motor[i].speedDes = sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
     }
     motor[0].speedDes = - motor[0].speedDes;
@@ -151,7 +146,6 @@ void fwd_control::fwdKinematicCal(const double vX,const double vY,const double a
     {
         motor[i].curTx = motor[i].MotorTune();
         servo[i].volTx = servo[i].MotorPosTune();
-
     }
 };
 
@@ -218,6 +212,7 @@ void fwd_control::txMotorThread(const ros::TimerEvent &)
 
     int nbytes;
     CmdMux(); // choose input source
+    // ROS_INFO("x:%.2f, y: %.2f, w: %.2f",vX_cmd, vY_cmd, avZ_cmd);
     fwdKinematicCal(vX_cmd,vY_cmd,avZ_cmd);
 
     if(ros::ok()){
