@@ -31,6 +31,8 @@ private:
     int s_servo, s_motor; //socketcan handle for two line
     int  moveable_in, direct_in, control_in;
     bool failsafe, frame_lost;
+    double speedMax, angularSpeedMax, minSpeedThreadhold;
+
 
     void sbusCB(const sbus_serial::Sbus::ConstPtr &sbus);
     void cmdCB(const geometry_msgs::Twist::ConstPtr &cmd_vel);
@@ -45,8 +47,6 @@ public:
     void rxMotorThread(const ros::TimerEvent &);
     void txServoThread(const ros::TimerEvent &);
     void rxServoThread(const ros::TimerEvent &);
-
-    double speedMax, angularSpeedMax, minSpeedThreadhold;
 
     Platform_M3508 motor[4];
     Platform_GM6020 servo[4];

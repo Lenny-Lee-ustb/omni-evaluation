@@ -28,6 +28,7 @@ class Platform_M3508
 private:
 	double D_speed, I_speed, K;
 	double a_1, b_0, b_1;
+	double getSignNum(double x);
 public:
 	Platform_M3508();
 	~Platform_M3508();
@@ -41,14 +42,13 @@ public:
 	int16_t MotorTune();
 	double LowPassFilter(double yLast, double x, double xLast);
 	void SendZero(int s);
-
-
 };
 
 Platform_M3508::Platform_M3508()
 {
 	D_speed = 1.0;
 	I_speed = 0.0;
+	torDes = 0.15;
 	a_1 = 0.828;
 	b_0 = 0.086;
 	b_1 = 0.086;
@@ -61,14 +61,12 @@ Platform_M3508::~Platform_M3508()
 
 int16_t Platform_M3508::MotorTune(){
 	// This method is borrowed from MIT Cheetah, which is used in Tmotor AK series. 
-	double Vdes = speedDes;
-	double dTheta = speed;
-	double Kd = D_speed;
-	double T_ff = torDes;
 	double T_ref;
 	int16_t iqref;
 
-	T_ref = Kd * (Vdes-dTheta) + T_ff;
+	// T_ref = Kd * (speedDes-speed) + torDes;
+	T_ref = D_speed * (speedDes - speed);
+	T_ref = T_ref + getSignNum(T_ref) * torDes;
 	T_ref = std::min(std::max(T_ref, M3508_T_MIN), M3508_T_MAX);
 	iqref = (int16_t) round(T_ref/K*(16384.0/20.0));
 	iqref = std::min(std::max(iqref, (int16_t) -16384), (int16_t) 16384);
@@ -81,6 +79,13 @@ double Platform_M3508::LowPassFilter(double yLast, double x, double xLast){
 	// y_{n} = a_1 * y_{n-1} + b_0 * x_{n} + b_1 * x_{n-1}
 	f = a_1 * yLast + b_0 * x + b_1 * xLast;
 	return f;
+}
+
+
+double Platform_M3508::getSignNum(double x){
+	if (x > 0) return 1;
+	if (x < 0) return -1;
+	return 0;
 }
 
 void Platform_M3508::SendZero(int s)

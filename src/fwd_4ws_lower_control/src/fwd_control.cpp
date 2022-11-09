@@ -138,8 +138,15 @@ void fwd_control::fwdKinematicCal(const double vX,const double vY,const double a
         servo[i].angleDes = -servo[i].angleCalculate(servo[i].vx_wheel, servo[i].vy_wheel);
         motor[i].speedDes = sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
     }
+    if (motor[0].speedDes != 0.0)
+    {
     motor[0].speedDes = - motor[0].speedDes;
-    motor[1].speedDes = - motor[1].speedDes;
+    }
+    if (motor[1].speedDes != 0.0)
+    {
+        motor[1].speedDes = - motor[1].speedDes;
+    }
+    
 
     
     for (int i = 0; i < 4; i++)
