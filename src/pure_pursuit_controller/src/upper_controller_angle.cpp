@@ -1,14 +1,5 @@
 #include "include/upper_controller.hpp"
 
-double last_d_theta = 0;
-double last_lateral_dist = 0;
-double last_speed = 0;
-double P_Yaw, I_Yaw, D_Yaw;
-double P_Lateral, I_Lateral, D_Lateral;
-double P_Long, I_Long, D_Long,forward_dist;
-double Kp, Kd;
-double zero_pos,roll_rot_factor,roll_lat_factor,velocity_factor,P_pit,D_pit,P_rol,D_rol;
-
 UpperController::UpperController() {
   // Private parameters handler
   ros::NodeHandle pn("~");
@@ -29,6 +20,7 @@ UpperController::UpperController() {
   pn.param("P_Long", P_Long, 1.0);
   pn.param("I_Long", I_Long, 1.0);
   pn.param("D_Long", D_Long, 1.0);
+  pn.param("controlMode", controlMode, 0);
 
   // Publishers and Subscribers
   odom_sub = n_.subscribe("/odometry/filtered", 1, &UpperController::odomCB, this);
@@ -56,6 +48,9 @@ UpperController::UpperController() {
   cmd_vel.linear.x = 0;
   cmd_vel.linear.y = 0;
   cmd_vel.angular.z = 0;
+  last_d_theta = 0;
+  last_lateral_dist = 0;
+  last_speed = 0;
 
   // Show param info
   ROS_INFO("[param] controller_freq: %.2f", controller_freq);
@@ -88,6 +83,7 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
   double LateralDir = GetLateralDir(carPose, LateralPose);
   double rot_rad = rot_angle / 180.0 * PI;
   double vt,vn,w;
+  double vx,vy;
   // double LeftorRight = isRightorLeft(LateralPose.position, carPose);
   lateral_dist = LateralDir * getLateralDist(carPose, LateralPose);
 
@@ -104,25 +100,35 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
 
     if (foundForwardPt) {
         if (!goal_reached) {
-          // PID control
-          // w = atan2(2*0.35*sin(d_theta),forward_dist);
-          // w = d_theta + atan2(lateral_dist, carVel.linear.x); 
-          w = d_theta * P_Yaw;
-          vt = baseSpeed;
-          vn = lateral_dist * P_Lateral;
+          // control mode 0: vehicle pursuit 
+          if (controlMode == 0)
+          {  
+            w = d_theta * P_Yaw;
+            vt = baseSpeed;
+            vn = lateral_dist * P_Lateral;
+            
+            last_speed = baseSpeed - carVel.linear.x;
+            last_d_theta = d_theta;
+            last_lateral_dist = lateral_dist;
+            
+            cmd_vel.angular.z = w;
+            cmd_vel.linear.x = vt;
+            cmd_vel.linear.y = vn;
+          }
+          else if(controlMode ==1)
+          {
+            vn = baseSpeed * sin(theta) + (lateral_dist * P_Lateral) * sin(theta + M_PI/2.0);
+            vt = baseSpeed * cos(theta) + (lateral_dist * P_Lateral) * cos(theta + M_PI/2.0); 
+
+            cmd_vel.angular.z = -thetar * P_Yaw;
+            cmd_vel.linear.x = vt;
+            cmd_vel.linear.y = vn;
+          }
           
-          last_speed = baseSpeed - carVel.linear.x;
-          last_d_theta = d_theta;
-          last_lateral_dist = lateral_dist;
-          
-          // Rot_angle
-          cmd_vel.angular.z = w;
-          cmd_vel.linear.x = vt;
-          cmd_vel.linear.y = vn;
 
 
           ROS_INFO("----------");
-          ROS_INFO("Vyaw:%.2f, Vn:%.2f, linear.x: %.2f",w,vn,carVel.linear.x);
+          ROS_INFO("Vyaw:%.2f, Vn:%.2f, Vt: %.2f",cmd_vel.angular.z,vn,vt);
         }
     }
     pub_.publish(cmd_vel);
