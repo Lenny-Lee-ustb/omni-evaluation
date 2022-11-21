@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
     <node pkg="path_load" type="path_load.py" name="path_loader" >
-        <param name="file_path" value="$(find path_load)/src/square.csv" />
+        <param name="file_path" value="$(find path_load)/src/straight/0-2m.csv" />
         <param name="pub_hz" value="3" />
     </node>
     

@@ -28,7 +28,7 @@ class Platform_M3508
 private:
 	double D_speed, I_speed, K;
 	double a_1, b_0, b_1;
-	double getSignNum(double x);
+	double getSignNum(double x, double threshold);
 public:
 	Platform_M3508();
 	~Platform_M3508();
@@ -48,7 +48,7 @@ Platform_M3508::Platform_M3508()
 {
 	D_speed = 1.0;
 	I_speed = 0.0;
-	torDes = 0.15;
+	torDes = 0.10;
 	a_1 = 0.828;
 	b_0 = 0.086;
 	b_1 = 0.086;
@@ -66,7 +66,7 @@ int16_t Platform_M3508::MotorTune(){
 
 	// T_ref = Kd * (speedDes-speed) + torDes;
 	T_ref = D_speed * (speedDes - speed);
-	T_ref = T_ref + getSignNum(T_ref) * torDes;
+	T_ref = T_ref + getSignNum(T_ref, 0.2) * torDes;
 	T_ref = std::min(std::max(T_ref, M3508_T_MIN), M3508_T_MAX);
 	iqref = (int16_t) round(T_ref/K*(16384.0/20.0));
 	iqref = std::min(std::max(iqref, (int16_t) -16384), (int16_t) 16384);
@@ -82,9 +82,9 @@ double Platform_M3508::LowPassFilter(double yLast, double x, double xLast){
 }
 
 
-double Platform_M3508::getSignNum(double x){
-	if (x > 0) return 1;
-	if (x < 0) return -1;
+double Platform_M3508::getSignNum(double x, double threshold){
+	if (x > threshold) return 1;
+	if (x < - threshold) return -1;
 	return 0;
 }
 

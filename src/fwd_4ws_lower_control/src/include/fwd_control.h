@@ -17,12 +17,12 @@ class fwd_control
 {
 private:
     ros::NodeHandle n_;
-    ros::Publisher motorInfoPub, servoInfoPub;
+    ros::Publisher motorInfoPub, servoInfoPub, cmdStatePub;
     ros::Subscriber simulinkSub, sbusSub;
     ros::Timer motorTimerTx,motorTimerRx;
     ros::Timer servoTimerTx,servoTimerRx;
 
-    geometry_msgs::PolygonStamped MotorInfo, ServoInfo;
+    geometry_msgs::PolygonStamped MotorInfo, ServoInfo, CmdInfo;
     geometry_msgs::Twist cmdUp, cmdSbus;
     sensor_msgs::Temperature MotorTemp, ServoTemp;
 
@@ -31,7 +31,7 @@ private:
     int s_servo, s_motor; //socketcan handle for two line
     int  moveable_in, direct_in, control_in;
     bool failsafe, frame_lost;
-    double speedMax, angularSpeedMax, minSpeedThreadhold;
+    double speedMax, angularSpeedMax, minSpeedThreshold;
 
 
     void sbusCB(const sbus_serial::Sbus::ConstPtr &sbus);

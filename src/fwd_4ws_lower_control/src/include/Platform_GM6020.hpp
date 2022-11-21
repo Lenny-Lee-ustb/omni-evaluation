@@ -40,7 +40,7 @@ public:
 	int16_t MotorPosTune();
 	double AngleRound(double theta);
 	void sendZero(int s);
-	double angleCalculate(double vx,double vy);
+	double angleCalculate(double vx,double vy, double minSpeedThreshold);
 	void calWheelSpeed(double vx,double vy, double avz);
 	
 	int16_t curRx, velRx, angleRx, volTx;
@@ -127,8 +127,8 @@ void Platform_GM6020::calWheelSpeed(double vx,double vy, double avz){
 	vy_wheel = vy + x_wheel * avz;
 }
 
-double Platform_GM6020::angleCalculate(double vx,double vy){
-	if(fabs(vx) < 0.03 && fabs(vy) < 0.03){
+double Platform_GM6020::angleCalculate(double vx,double vy, double minSpeedThreshold){
+	if(fabs(vx) < minSpeedThreshold && fabs(vy) < minSpeedThreshold){
 		return 0.0;
 	}
 	else{

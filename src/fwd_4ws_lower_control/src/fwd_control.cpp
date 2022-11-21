@@ -14,7 +14,7 @@ fwd_control::fwd_control(int s_motor_can, int s_servo_can)
 	ros::NodeHandle n("~");
     n.getParam("speedMax", speedMax);
     n.getParam("angularSpeedMax", angularSpeedMax);
-    n.getParam("minSpeedThreadhold", minSpeedThreadhold);
+    n.getParam("minSpeedThreshold", minSpeedThreshold);
     
     s_motor = s_motor_can;
     s_servo = s_servo_can;
@@ -27,7 +27,9 @@ fwd_control::fwd_control(int s_motor_can, int s_servo_can)
     avZ_cmd =0.0;
     MotorInfo.polygon.points.resize(4);
     ServoInfo.polygon.points.resize(4);
+    CmdInfo.polygon.points.resize(1);
 
+    // GM6020 absolute angle offset
     servo[0].angleInit = 2.2296;
     servo[1].angleInit = 3.2881;
     servo[2].angleInit = 4.1203;
@@ -46,6 +48,8 @@ fwd_control::fwd_control(int s_motor_can, int s_servo_can)
     simulinkSub = n_.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, &fwd_control::cmdCB, this);
     motorInfoPub = n_.advertise<geometry_msgs::PolygonStamped>("/M3508_Rx_State", 10);
     servoInfoPub = n_.advertise<geometry_msgs::PolygonStamped>("/GM6020_Rx_State", 10);
+    cmdStatePub = n_.advertise<geometry_msgs::PolygonStamped>("/cmd_state", 10);
+
     motorTimerTx = n_.createTimer(ros::Duration(1.0/1000.0),
                           &fwd_control::txMotorThread,
                           this); // 1kHz send
@@ -70,8 +74,8 @@ void fwd_control::sbusCB(const sbus_serial::Sbus::ConstPtr& sbus)
 
     int longSbusIn, lateralSbusIn, steerSbusIn = 0; // from upper controller   
 
-    longSbusIn = sbus->mappedChannels[1]-500;
-    lateralSbusIn = sbus->mappedChannels[3]-500;
+    longSbusIn = sbus->mappedChannels[1] - 500;
+    lateralSbusIn = sbus->mappedChannels[3] - 500;
     steerSbusIn = sbus->mappedChannels[0] - 500;
     // remap steer angle to symatric[-500, 500]
     moveable_in = sbus->mappedChannels[6];
@@ -96,32 +100,38 @@ void fwd_control::CmdMux(){
         vX_cmd = 0.0;
         vY_cmd = 0.0;
         avZ_cmd = 0.0;
+        CmdInfo.polygon.points[0].x = 0;
+        // cmd state == 0, cmd send zero to platform
         if (failsafe == 1 || frame_lost == 1){
             ROS_ERROR("RC SIGNAL LOST!!! Check RC status!");
         }
         else if(cmdMuxCount%500 == 0){
             ROS_WARN("moveable_in=%d, control_in=%d", !!moveable_in, !!control_in);
         }
-
     }
     else{
-        // cmdMuxCount = 0;
         if (!moveable_in == false)
         {
             vX_cmd = cmdSbus.linear.x;
             vY_cmd = cmdSbus.linear.y;
             avZ_cmd = cmdSbus.angular.z;
+            CmdInfo.polygon.points[0].x = 1;
+            // cmd state == 1, cmd comes from upper controller
         }
         if (!control_in == false)
         {
             vX_cmd = cmdUp.linear.x;
             vY_cmd = cmdUp.linear.y;
             avZ_cmd = cmdUp.angular.z;
+            CmdInfo.polygon.points[0].x = -1;
+            // cmd state == 1, cmd comes from sbus
         }
     }
     vX_cmd = fmin(fmax(vX_cmd,-speedMax),speedMax);
     vY_cmd = fmin(fmax(vY_cmd,-speedMax),speedMax);
     avZ_cmd = fmin(fmax(avZ_cmd,-angularSpeedMax),angularSpeedMax);
+    CmdInfo.header.stamp = ros::Time::now();
+    cmdStatePub.publish(CmdInfo);
     cmdMuxCount++;
 }
 
@@ -129,18 +139,17 @@ void fwd_control::CmdMux(){
 
 // INPUT: vx(m/s), vy(m/s), omega(rad/s) 
 // OUTPUT: 4wd-4ws robot 
-// 转向角范围：-0.5 * 
+// 全向运动 采用前向运动学 
 void fwd_control::fwdKinematicCal(const double vX,const double vY,const double avZ){
-
     for (int i = 0; i < 4; i++)
     {
         servo[i].calWheelSpeed(vX, vY, avZ);
-        servo[i].angleDes = -servo[i].angleCalculate(servo[i].vx_wheel, servo[i].vy_wheel);
+        servo[i].angleDes = -servo[i].angleCalculate(servo[i].vx_wheel, servo[i].vy_wheel, minSpeedThreshold);
         motor[i].speedDes = sqrt(servo[i].vx_wheel * servo[i].vx_wheel + servo[i].vy_wheel * servo[i].vy_wheel);
     }
     if (motor[0].speedDes != 0.0)
     {
-    motor[0].speedDes = - motor[0].speedDes;
+        motor[0].speedDes = - motor[0].speedDes;
     }
     if (motor[1].speedDes != 0.0)
     {
@@ -205,6 +214,7 @@ void fwd_control::rxMotorThread(const ros::TimerEvent &){
         }
     }
     if(motorRxCount%4==0){
+        MotorInfo.header.stamp = ros::Time::now();
         motorInfoPub.publish(MotorInfo);
     }
     motorRxCount++;
@@ -274,9 +284,9 @@ void fwd_control::rxServoThread(const ros::TimerEvent &){
 
     }
     if(servoRxCount%4==0){
+        ServoInfo.header.stamp = ros::Time::now();
         servoInfoPub.publish(ServoInfo);
     }
-
 
     servoRxCount++;
 }
