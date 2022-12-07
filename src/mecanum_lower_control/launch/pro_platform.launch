@@ -33,7 +33,7 @@
     <!-- spawn controller node -->
     <node pkg="mecanum_lower_control" type="mecanum_control" name="mecanum_control" output="screen">
         <param name="canSeries"     type="string"    value="can0"/>
-        <param name="speedMax"     type="double"    value="1"/>
+        <param name="speedMax"     type="double"    value="2.5"/>
     </node>
 
     <!-- PlotJuggle -->
