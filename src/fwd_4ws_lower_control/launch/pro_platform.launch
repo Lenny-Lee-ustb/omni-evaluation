@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <launch>
 
+    <node pkg="sui-201-ros-pkg" type="powerPub.py" name="power_publisher" />
+
 	<node pkg="sbus_serial" type="sbus_serial_node" name="sbus_node" output="screen">
 		<param name="port" value="/dev/sbus" />
 		<param name="refresh_rate_hz" value="25" />
