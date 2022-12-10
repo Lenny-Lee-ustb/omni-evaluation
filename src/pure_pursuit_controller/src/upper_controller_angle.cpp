@@ -51,6 +51,8 @@ UpperController::UpperController() {
   last_d_theta = 0;
   last_lateral_dist = 0;
   last_speed = 0;
+  lateral_dist_sum, theta_sum, speed_sum = 0.0;
+
 
   // Show param info
   ROS_INFO("[param] controller_freq: %.2f", controller_freq);
@@ -92,9 +94,9 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
   cmd_vel.angular.z = 0;
 
   if (goal_received) {
-    double thetar = getYawFromPose(carPose);
-    double theta = getYawFromPose(ForwardPose);
-    double d_theta =  getAngleRound(theta - thetar);
+    double thetar = getYawFromPose(carPose); // Robot's Yaw
+    double theta = getYawFromPose(ForwardPose); // Ref path's Yaw
+    double d_theta =  getAngleRound(theta - thetar); // Round angle, avoid
     double slow_factor = 1.0- fabs(pow(d_theta/3.14,3));
 
 
@@ -104,7 +106,7 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
           if (controlMode == 0)
           {  
             w = d_theta * P_Yaw;
-            vt = baseSpeed;
+            vt = baseSpeed; // longidinal
             vn = lateral_dist * P_Lateral;
             
             last_speed = baseSpeed - carVel.linear.x;
@@ -115,20 +117,24 @@ void UpperController::controlLoopCB(const ros::TimerEvent &) {
             cmd_vel.linear.x = vt;
             cmd_vel.linear.y = vn;
           }
+          // control mode 1: omnidirctional, no orientation
           else if(controlMode ==1)
-          {
-            vn = baseSpeed * sin(theta) + (lateral_dist * P_Lateral) * sin(theta + M_PI/2.0);
-            vt = baseSpeed * cos(theta) + (lateral_dist * P_Lateral) * cos(theta + M_PI/2.0); 
+          { 
 
-            cmd_vel.angular.z = -thetar * P_Yaw;
+            vn = baseSpeed * sin(theta) + (lateral_dist * P_Lateral + lateral_dist_sum * I_Lateral) * sin(theta + M_PI/2.0);
+            vt = baseSpeed * cos(theta) + (lateral_dist * P_Lateral + lateral_dist_sum * I_Lateral) * cos(theta + M_PI/2.0); 
+
+            cmd_vel.angular.z = -(thetar * P_Yaw + theta_sum * I_Yaw);
             cmd_vel.linear.x = vt;
             cmd_vel.linear.y = vn;
+
+            lateral_dist_sum += lateral_dist/controller_freq;
+            theta_sum += thetar/controller_freq;
           }
           
-
-
-          ROS_INFO("----------");
-          ROS_INFO("Vyaw:%.2f, Vn:%.2f, Vt: %.2f",cmd_vel.angular.z,vn,vt);
+          ROS_INFO(">>-------------------------<<");
+          ROS_INFO("Vyaw:%.2f, Vn:%.2f, Vt: %.2f",cmd_vel.angular.z,cmd_vel.linear.y,cmd_vel.linear.x);
+          ROS_INFO("lateral_sum:%.2f, theta_sum:%.2f",lateral_dist_sum, theta_sum);
         }
     }
     pub_.publish(cmd_vel);

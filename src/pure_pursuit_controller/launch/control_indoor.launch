@@ -21,18 +21,17 @@
         <param name = "goalRadius" type="double" value = "0.5"/>
         <param name = "goal_pose_err" type="double" value = "1.0"/>
 
-        <param name = "baseSpeed" type="double" value = "1.0"/>
+        <param name = "baseSpeed" type="double" value = "2.0"/>
         <param name = "rot_angle" type="double" value = "0.0"/>
         <param name = "forward_dist" type="double" value = "0.3"/>
 
-        <param name = "P_Lateral" type="double" value = "2.0"/>
-        <param name = "I_Lateral" type="double" value = "1.0"/>
+        <param name = "P_Lateral" type="double" value = "3.0"/>
+        <param name = "I_Lateral" type="double" value = "0.2"/>
         <param name = "D_Lateral" type="double" value = "0.0"/>
 
         <param name = "P_Yaw" type="double" value = "2.0"/>
-        <param name = "I_Yaw" type="double" value = "1.0"/>
+        <param name = "I_Yaw" type="double" value = "0.2"/>
         <param name = "D_Yaw" type="double" value = "0.0"/>
-
 
         <param name = "controlMode" type="int" value = "1"/>
     </node>
