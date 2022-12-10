@@ -76,8 +76,8 @@ void CmdMux(){
         if (!control_in == false)
         {
             vX_cmd = cmdUp.linear.x;
-            vY_cmd = cmdUp.linear.y;
-            avZ_cmd = cmdUp.angular.z;
+            vY_cmd = - cmdUp.linear.y;
+            avZ_cmd = - cmdUp.angular.z;
         }
         
         // ROS_INFO("input speed is: %lf, %d", vt_cmd, speedSbusIn);

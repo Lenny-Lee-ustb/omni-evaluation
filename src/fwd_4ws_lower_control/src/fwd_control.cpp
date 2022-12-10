@@ -156,8 +156,6 @@ void fwd_control::fwdKinematicCal(const double vX,const double vY,const double a
         motor[1].speedDes = - motor[1].speedDes;
     }
     
-
-    
     for (int i = 0; i < 4; i++)
     {
         motor[i].curTx = motor[i].MotorTune();
