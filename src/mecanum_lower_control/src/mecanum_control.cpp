@@ -7,11 +7,11 @@
 #define MOTOR_RATIO 19.2 // input/output M3508 P19
 #define WHEEL_RADIUS 0.076 // wheel radius of 1/10 car
 #define MAX_SPPED 3.4 // 3.4m/s at 420rpm(out axle)
-#define MAX_ANGULAR_VLOCITY 2.0 // rad/s
+#define MAX_ANGULAR_VLOCITY 5.0 // rad/s
 
-ros::Publisher motorInfoPub;
+ros::Publisher motorInfoPub, cmdStatePub;
 ros::Subscriber simulinkSub, sbusSub;
-geometry_msgs::PolygonStamped MotorInfo;
+geometry_msgs::PolygonStamped MotorInfo, CmdInfo;
 geometry_msgs::Twist cmdUp, cmdSbus;
 sensor_msgs::Temperature MotorTemp;
 
@@ -19,6 +19,7 @@ double temp, tempLast, tempAlpha = 0.05;
 double speedMax = 0.0, speedMin = -0.0;
 double frictionTor = 0.10;
 double vX_cmd, vY_cmd, avZ_cmd;
+int cmdMuxCount;
 
 int  moveable_in, direct_in, control_in = 0;
 bool failsafe, frame_lost = 0;
@@ -51,20 +52,18 @@ void cmdCB(const geometry_msgs::Twist::ConstPtr &cmd_vel){
 };
 
 void CmdMux(){
-
     if ( (!moveable_in == !control_in) || failsafe == 1 || frame_lost == 1){
         vX_cmd = 0.0;
         vY_cmd = 0.0;
         avZ_cmd = 0.0;
+        CmdInfo.polygon.points[0].x = 0;
+        // cmd state == 0, cmd send zero to platform
         if (failsafe == 1 || frame_lost == 1){
             ROS_ERROR("RC SIGNAL LOST!!! Check RC status!");
         }
-        else{
-            // ROS_ERROR("RC NOT enable, please toggle SWA to down!!");
+        else if(cmdMuxCount%500 == 0){
             ROS_WARN("moveable_in=%d, control_in=%d", !!moveable_in, !!control_in);
         }
-        // ROS_WARN("input speed is: %lf, %d", vt_cmd, speedSbusIn);
-        // ROS_WARN("input steer is: %lf, %d", delta_cmd, steerSbusIn);
     }
     else{
         if (!moveable_in == false)
@@ -72,17 +71,21 @@ void CmdMux(){
             vX_cmd = cmdSbus.linear.x;
             vY_cmd = cmdSbus.linear.y;
             avZ_cmd = cmdSbus.angular.z;
+            CmdInfo.polygon.points[0].x = 1;
+            // cmd state == 1, cmd comes from upper controller
         }
         if (!control_in == false)
         {
             vX_cmd = cmdUp.linear.x;
-            vY_cmd = - cmdUp.linear.y;
-            avZ_cmd = - cmdUp.angular.z;
+            vY_cmd = cmdUp.linear.y;
+            avZ_cmd = cmdUp.angular.z;
+            CmdInfo.polygon.points[0].x = -1;
+            // cmd state == 1, cmd comes from sbus
         }
-        
-        // ROS_INFO("input speed is: %lf, %d", vt_cmd, speedSbusIn);
-        // ROS_INFO("input steer is: %lf, %d", delta_cmd, steerSbusIn);
     }
+    CmdInfo.header.stamp = ros::Time::now();
+    cmdStatePub.publish(CmdInfo);
+    cmdMuxCount++;
 }
 
 // INPUT: vx(m/s), vy(m/s), omega(rad/s) 
@@ -223,7 +226,9 @@ int main(int argc, char** argv) {
     sbusSub = n.subscribe<sbus_serial::Sbus>("/sbus", 10, sbusCB);
     simulinkSub = n.subscribe<geometry_msgs::Twist>("/cmd_vel", 10, cmdCB);
     motorInfoPub = n.advertise<geometry_msgs::PolygonStamped>("/M3508_Rx_State", 10);
+    cmdStatePub = n.advertise<geometry_msgs::PolygonStamped>("/cmd_state", 10);
     MotorInfo.polygon.points.resize(4);
+    CmdInfo.polygon.points.resize(1);
     
     signal(SIGINT, signalCallback);
 
